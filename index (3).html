@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Did I Do The Thing?</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #ffffff;
+    --yellow: #FFD93D;
+    --green: #6BCB77;
+    --green-dark: #4aa358;
+    --red: #FF6B6B;
+    --red-dark: #e04f4f;
+    --navy: #1A1A2E;
+    --purple: #845EC2;
+    --orange: #FF9671;
+  }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--cream);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    padding-bottom: 80px;
+  }
+
+  .confetti-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  .confetti-piece {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    top: -20px;
+    animation: confetti-fall linear forwards;
+    border-radius: 2px;
+  }
+
+  @keyframes confetti-fall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    80% { opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .overlay.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .overlay-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(26,26,46,0.82);
+    backdrop-filter: blur(4px);
+  }
+
+  .overlay-content {
+    position: relative;
+    text-align: center;
+    padding: 2rem;
+    animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  @keyframes pop {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .overlay-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(3rem, 12vw, 7rem);
+    color: var(--yellow);
+    text-shadow: 4px 4px 0 var(--orange), 8px 8px 0 rgba(0,0,0,0.2);
+    line-height: 1;
+    margin-bottom: 1.5rem;
+  }
+
+  .overlay-quote {
+    font-size: clamp(1rem, 3vw, 1.4rem);
+    color: white;
+    max-width: 480px;
+    font-weight: 700;
+    line-height: 1.5;
+    background: rgba(255,255,255,0.1);
+    padding: 1rem 1.5rem;
+    border-radius: 16px;
+    border: 2px solid rgba(255,255,255,0.2);
+    margin-bottom: 2rem;
+  }
+
+  .overlay-close {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.2rem;
+    padding: 0.75rem 2rem;
+    border-radius: 50px;
+    border: none;
+    background: white;
+    color: var(--navy);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+  }
+
+  .overlay-close:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0,0,0,0.2); }
+  .overlay-close:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+
+  .notyet-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2.5rem, 9vw, 5rem);
+    color: #FFD93D;
+    text-shadow: 3px 3px 0 var(--orange);
+    margin-bottom: 1rem;
+  }
+
+  nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    width: 100%;
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.75rem 1rem 1rem;
+    background: white;
+    border-top: 2px solid #f0f0f0;
+    justify-content: center;
+    z-index: 50;
+    box-shadow: 0 -4px 20px rgba(26,26,46,0.08);
+  }
+
+  .tab {
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.9rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 50px;
+    border: none;
+    background: transparent;
+    color: var(--navy);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .tab.active {
+    background: var(--navy);
+    color: var(--yellow);
+    box-shadow: 0 4px 14px rgba(26,26,46,0.18);
+  }
+
+  .tab:not(.active):hover { background: rgba(26,26,46,0.07); }
+
+  .page { display: none; width: 100%; max-width: 640px; padding: 1.25rem 1.5rem; }
+  .page.active { display: block; }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .page-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(1.8rem, 7vw, 2.8rem);
+    color: var(--navy);
+    line-height: 1.1;
+  }
+
+  .page-title span { color: var(--purple); }
+
+  .page-subtitle {
+    font-size: 0.9rem;
+    color: #888;
+    margin-top: 0.2rem;
+    font-weight: 600;
+  }
+
+  .card {
+    background: white;
+    border-radius: 24px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  /* TODOS */
+  .add-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+
+  .add-row textarea {
+    flex: 1;
+    min-height: 48px;
+    border: 2px solid #eee;
+    border-radius: 16px;
+    padding: 0.65rem 1rem;
+    font-family: 'Nunito', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--navy);
+    background: #fafafa;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .add-row textarea:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 4px rgba(132,94,194,0.12);
+    background: white;
+  }
+
+  .add-row textarea::placeholder { color: #bbb; font-weight: 600; }
+
+  .btn-add {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1rem;
+    padding: 0.65rem 1.1rem;
+    border-radius: 16px;
+    border: none;
+    background: var(--purple);
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 0 rgba(132,94,194,0.35);
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .btn-add:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(132,94,194,0.35); }
+  .btn-add:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(132,94,194,0.35); }
+
+  .todo-item {
+    background: white;
+    border-radius: 16px;
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 0.6rem;
+    box-shadow: 0 3px 12px rgba(26,26,46,0.07);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2.5px solid transparent;
+    animation: slide-in 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .todo-item:hover {
+    box-shadow: 0 6px 20px rgba(26,26,46,0.12);
+    transform: translateY(-1px);
+  }
+
+  .todo-item.selected {
+    border-color: var(--purple);
+    background: #faf7ff;
+    box-shadow: 0 6px 20px rgba(132,94,194,0.2);
+  }
+
+  .todo-radio {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2.5px solid #ddd;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .todo-item.selected .todo-radio {
+    background: var(--purple);
+    border-color: var(--purple);
+  }
+
+  .todo-radio-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: white;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .todo-item.selected .todo-radio-dot { opacity: 1; }
+
+  .todo-text {
+    flex: 1;
+    font-weight: 800;
+    color: var(--navy);
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  .todo-delete {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .todo-delete:hover { background: #ffe0e0; color: var(--red); }
+
+  .select-hint {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #aaa;
+    font-weight: 700;
+    margin-top: 0.5rem;
+  }
+
+  /* THE THING */
+  .current-task-box {
+    background: linear-gradient(135deg, #f8f4ff 0%, #fff 100%);
+    border: 2.5px solid rgba(132,94,194,0.2);
+    border-radius: 16px;
+    padding: 0.6rem 1rem;
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+
+  .current-task-label {
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.8rem;
+    color: var(--purple);
+    margin-bottom: 0.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .current-task-text {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(1.1rem, 3.5vw, 1.4rem);
+    color: var(--navy);
+    line-height: 1.2;
+  }
+
+  .no-task-box {
+    background: #fafafa;
+    border: 2.5px dashed #ddd;
+    border-radius: 16px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    text-align: center;
+    color: #bbb;
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  .no-task-box span { display: inline; font-size: 1rem; margin-right: 0.3rem; }
+
+  .did-label {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.6rem;
+    color: var(--navy);
+    text-align: center;
+    margin-bottom: 0.4rem;
+  }
+
+  .btn-yes {
+    width: 180px; height: 180px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.6rem;
+    letter-spacing: 0.05em;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 8px 28px rgba(107,203,119,0.45);
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  .btn-yes:hover { background: var(--green-dark); transform: translateY(-4px); box-shadow: 0 14px 36px rgba(107,203,119,0.5); }
+  .btn-yes:active { transform: translateY(2px); box-shadow: 0 4px 12px rgba(107,203,119,0.35); }
+  .btn-yes:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+  .btn-notyet {
+    width: 118px; height: 118px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1rem;
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 8px 28px rgba(255,107,107,0.4);
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  .btn-notyet:hover { background: var(--red-dark); transform: translateY(-4px); box-shadow: 0 14px 36px rgba(255,107,107,0.5); }
+  .btn-notyet:active { transform: translateY(2px); box-shadow: 0 4px 12px rgba(255,107,107,0.3); }
+  .btn-notyet:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+  .btn-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  /* DONE */
+  .done-header {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2rem;
+    color: var(--navy);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .done-count {
+    background: var(--purple);
+    color: white;
+    font-size: 1rem;
+    padding: 0.15rem 0.65rem;
+    border-radius: 50px;
+    font-family: 'Fredoka One', cursive;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #aaa;
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  .empty-emoji { font-size: 3rem; display: block; margin-bottom: 0.75rem; }
+
+  .done-item {
+    background: white;
+    border-radius: 16px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 4px 16px rgba(26,26,46,0.08);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    animation: slide-in 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  .done-check {
+    width: 36px; height: 36px;
+    background: var(--green);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    color: white;
+  }
+
+  .done-task {
+    flex: 1;
+    font-weight: 800;
+    color: var(--navy);
+    font-size: 1rem;
+  }
+
+  .done-date {
+    font-size: 0.78rem;
+    color: #aaa;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .done-actions {
+    display: flex;
+    gap: 0.3rem;
+    flex-shrink: 0;
+  }
+
+  .done-btn {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    color: #ccc;
+  }
+
+  .done-btn:hover.edit { background: #f0f4ff; color: var(--purple); }
+  .done-btn:hover.delete { background: #ffe0e0; color: var(--red); }
+
+  .done-item.editing {
+    flex-wrap: wrap;
+    border: 2px solid var(--purple);
+    background: #faf7ff;
+  }
+
+  .done-edit-input {
+    width: 100%;
+    margin-top: 0.5rem;
+    border: 2px solid var(--purple);
+    border-radius: 12px;
+    padding: 0.5rem 0.75rem;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--navy);
+    outline: none;
+    background: white;
+  }
+
+  .done-edit-actions {
+    width: 100%;
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  .btn-save-edit {
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.9rem;
+    padding: 0.4rem 1rem;
+    border-radius: 50px;
+    border: none;
+    background: var(--purple);
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-cancel-edit {
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.9rem;
+    padding: 0.4rem 1rem;
+    border-radius: 50px;
+    border: none;
+    background: #eee;
+    color: var(--navy);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+</style>
+</head>
+<body>
+
+<div class="confetti-container" id="confetti"></div>
+
+<div class="overlay" id="overlay-yes">
+  <div class="overlay-bg" onclick="closeOverlay('overlay-yes')"></div>
+  <div class="overlay-content">
+    <div class="overlay-title">WELL DONE! 🎉</div>
+    <div class="overlay-quote" id="quote-text"></div>
+    <button class="overlay-close" onclick="closeOverlay('overlay-yes')">Keep going! →</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-notyet">
+  <div class="overlay-bg" onclick="closeOverlay('overlay-notyet')"></div>
+  <div class="overlay-content">
+    <div class="notyet-title" id="notyet-text"></div>
+    <div class="overlay-quote" style="font-size:1.1rem">You've totally got this. One step at a time. 💪</div>
+    <button class="overlay-close" onclick="closeOverlay('overlay-notyet')">Back to it!</button>
+  </div>
+</div>
+
+<!-- PAGE 1: THINGS TO DO -->
+<div class="page active" id="page-todos">
+  <div class="page-header">
+    <div class="page-title">🤔 What Is <span>The Thing?</span></div>
+    <div class="page-subtitle">Add your things. Tap one to select it.</div>
+  </div>
+  <div class="card">
+    <div class="add-row">
+      <textarea id="todo-input" placeholder="e.g. Reply to that email, do 10 mins of stretching..." onkeydown="handleTodoKey(event)"></textarea>
+      <button class="btn-add" onclick="addTodo()">+ Add</button>
+    </div>
+  </div>
+  <div id="todo-list"></div>
+</div>
+
+<!-- PAGE 2: THE THING -->
+<div class="page" id="page-main">
+  <div class="page-header">
+    <div class="page-title">Did I Do <span>The Thing?</span></div>
+    <div class="page-subtitle">One thing at a time. You've got this.</div>
+  </div>
+  <div id="current-task-area"></div>
+  <div class="card" style="text-align:center">
+    <div class="did-label">Did I do it?</div>
+    <div class="btn-row">
+      <button class="btn-yes" id="btn-yes" onclick="handleYes()"><span style="font-size:2rem">✅</span>YES!</button>
+      <button class="btn-notyet" id="btn-notyet" onclick="handleNotYet()"><span style="font-size:2rem">😬</span>NOT YET</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 3: THINGS I'VE DONE -->
+<div class="page" id="page-done">
+  <div class="done-header">
+    Things I've Done <span class="done-count" id="done-count">0</span>
+  </div>
+  <div id="done-list"></div>
+</div>
+
+<nav>
+  <button class="tab active" onclick="showPage('todos', this)">📋 To Dos</button>
+  <button class="tab" onclick="showPage('main', this)">🎯 The Thing</button>
+  <button class="tab" onclick="showPage('done', this)">✅ Done</button>
+</nav>
+
+<script>
+  const quotes = [
+    "Every accomplishment starts with the decision to try. And you just proved it!",
+    "Small steps, big victories. That's how legends are made.",
+    "Look at you, actually doing it! Absolute icon behaviour.",
+    "Done is better than perfect — and you just did it perfectly.",
+    "You just proved to yourself that you can. Remember that feeling.",
+    "One thing checked off, a whole world of possibility ahead.",
+    "That's called momentum. Ride it!",
+    "Future you is sending back a very proud thumbs up right now.",
+    "The secret? People who get things done just... do them. Like you just did!",
+    "You're not just doing tasks — you're building the person you want to be."
+  ];
+
+  const notYetPhrases = [
+    "IT'S OK! 💛",
+    "YOU CAN DO IT! 🚀",
+    "NOT YET — BUT SOON! ⏳",
+    "TOMORROW IS STILL TODAY'S FRIEND! 🌤️",
+    "GIVE YOURSELF GRACE! 🌸",
+    "YOU'RE HUMAN AND THAT'S FINE! 💜",
+    "STILL ROOTING FOR YOU! 📣"
+  ];
+
+  let todos = [];
+  let selectedTodoId = null;
+  let doneItems = [];
+
+  try { todos = JSON.parse(localStorage.getItem('didthething_todos') || '[]'); } catch(e) {}
+  try { doneItems = JSON.parse(localStorage.getItem('didthething_done') || '[]'); } catch(e) {}
+  try { const s = localStorage.getItem('didthething_selected'); if (s) selectedTodoId = s; } catch(e) {}
+
+  function save() {
+    try { localStorage.setItem('didthething_todos', JSON.stringify(todos)); } catch(e) {}
+    try { localStorage.setItem('didthething_done', JSON.stringify(doneItems)); } catch(e) {}
+    try {
+      if (selectedTodoId) localStorage.setItem('didthething_selected', selectedTodoId);
+      else localStorage.removeItem('didthething_selected');
+    } catch(e) {}
+  }
+
+  function showPage(name, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    btn.classList.add('active');
+    if (name === 'todos') renderTodos();
+    if (name === 'main') renderCurrentTask();
+    if (name === 'done') renderDone();
+  }
+
+  function handleTodoKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addTodo(); }
+  }
+
+  function addTodo() {
+    const input = document.getElementById('todo-input');
+    const text = input.value.trim();
+    if (!text) {
+      input.style.borderColor = 'var(--red)';
+      input.focus();
+      setTimeout(() => input.style.borderColor = '', 1000);
+      return;
+    }
+    todos.push({ id: Date.now().toString(), text });
+    input.value = '';
+    save();
+    renderTodos();
+  }
+
+  function selectTodo(id) {
+    selectedTodoId = (selectedTodoId === id) ? null : id;
+    save();
+    renderTodos();
+  }
+
+  function deleteTodo(id, e) {
+    e.stopPropagation();
+    todos = todos.filter(t => t.id !== id);
+    if (selectedTodoId === id) selectedTodoId = null;
+    save();
+    renderTodos();
+  }
+
+  function renderTodos() {
+    const list = document.getElementById('todo-list');
+    if (todos.length === 0) {
+      list.innerHTML = '<div class="empty-state"><span class="empty-emoji">✏️</span>Add your first thing above!</div>';
+      return;
+    }
+    if (!todos.some(t => t.id === selectedTodoId)) selectedTodoId = null;
+
+    list.innerHTML = todos.map(todo => {
+      const sel = todo.id === selectedTodoId;
+      return `<div class="todo-item ${sel ? 'selected' : ''}" onclick="selectTodo('${todo.id}')">
+        <div class="todo-radio"><div class="todo-radio-dot"></div></div>
+        <div class="todo-text">${escapeHtml(todo.text)}</div>
+        <button class="todo-delete" onclick="deleteTodo('${todo.id}', event)" title="Remove">✕</button>
+      </div>`;
+    }).join('');
+
+    if (selectedTodoId) {
+      list.insertAdjacentHTML('beforeend', '<div class="select-hint">Selected — head to 🎯 The Thing!</div>');
+    }
+  }
+
+  function renderCurrentTask() {
+    const area = document.getElementById('current-task-area');
+    const selected = todos.find(t => t.id === selectedTodoId);
+    const yesBtn = document.getElementById('btn-yes');
+    const noBtn = document.getElementById('btn-notyet');
+
+    if (selected) {
+      area.innerHTML = `<div class="current-task-box">
+        <div class="current-task-label">The Thing</div>
+        <div class="current-task-text">${escapeHtml(selected.text)}</div>
+      </div>`;
+      yesBtn.disabled = false;
+      noBtn.disabled = false;
+    } else {
+      area.innerHTML = `<div class="no-task-box">
+        <span>📋</span>Go to <strong>To Do</strong> and select a task first!
+      </div>`;
+      yesBtn.disabled = true;
+      noBtn.disabled = true;
+    }
+  }
+
+  function handleYes() {
+    const selected = todos.find(t => t.id === selectedTodoId);
+    if (!selected) return;
+    doneItems.unshift({
+      task: selected.text,
+      date: new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
+    });
+    todos = todos.filter(t => t.id !== selectedTodoId);
+    selectedTodoId = null;
+    save();
+    launchConfetti();
+    document.getElementById('quote-text').textContent = quotes[Math.floor(Math.random() * quotes.length)];
+    document.getElementById('overlay-yes').classList.add('active');
+    updateCount();
+    renderCurrentTask();
+  }
+
+  function handleNotYet() {
+    document.getElementById('notyet-text').textContent = notYetPhrases[Math.floor(Math.random() * notYetPhrases.length)];
+    document.getElementById('overlay-notyet').classList.add('active');
+  }
+
+  function closeOverlay(id) {
+    document.getElementById(id).classList.remove('active');
+  }
+
+  let editingDoneIndex = null;
+
+  function renderDone() {
+    const list = document.getElementById('done-list');
+    updateCount();
+    if (doneItems.length === 0) {
+      list.innerHTML = '<div class="empty-state"><span class="empty-emoji">🌱</span>Nothing here yet — go do The Thing!</div>';
+      return;
+    }
+    list.innerHTML = doneItems.map((item, i) => {
+      const isEditing = editingDoneIndex === i;
+      return `<div class="done-item ${isEditing ? 'editing' : ''}">
+        <div class="done-check">✓</div>
+        <div class="done-task">${escapeHtml(item.task)}</div>
+        <div class="done-date">${item.date}</div>
+        <div class="done-actions">
+          <button class="done-btn edit" onclick="startEditDone(${i})" title="Edit">✏️</button>
+          <button class="done-btn delete" onclick="deleteDone(${i})" title="Delete">✕</button>
+        </div>
+        ${isEditing ? `
+          <input class="done-edit-input" id="done-edit-${i}" value="${escapeHtml(item.task)}" />
+          <div class="done-edit-actions">
+            <button class="btn-cancel-edit" onclick="cancelEditDone()">Cancel</button>
+            <button class="btn-save-edit" onclick="saveEditDone(${i})">Save</button>
+          </div>` : ''}
+      </div>`;
+    }).join('');
+
+    if (editingDoneIndex !== null) {
+      const input = document.getElementById(`done-edit-${editingDoneIndex}`);
+      if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+    }
+  }
+
+  function startEditDone(i) {
+    editingDoneIndex = i;
+    renderDone();
+  }
+
+  function cancelEditDone() {
+    editingDoneIndex = null;
+    renderDone();
+  }
+
+  function saveEditDone(i) {
+    const input = document.getElementById(`done-edit-${i}`);
+    const val = input ? input.value.trim() : '';
+    if (val) { doneItems[i].task = val; save(); }
+    editingDoneIndex = null;
+    renderDone();
+  }
+
+  function deleteDone(i) {
+    doneItems.splice(i, 1);
+    if (editingDoneIndex === i) editingDoneIndex = null;
+    save();
+    renderDone();
+  }
+
+  function updateCount() {
+    document.getElementById('done-count').textContent = doneItems.length;
+  }
+
+  function launchConfetti() {
+    const container = document.getElementById('confetti');
+    container.innerHTML = '';
+    const colors = ['#FFD93D','#6BCB77','#FF6B6B','#845EC2','#FF9671','#4FC3F7','#F06292'];
+    for (let i = 0; i < 80; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.left = Math.random() * 100 + 'vw';
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.width = (8 + Math.random() * 10) + 'px';
+      piece.style.height = (8 + Math.random() * 10) + 'px';
+      piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      piece.style.animationDuration = (1.5 + Math.random() * 2) + 's';
+      piece.style.animationDelay = (Math.random() * 0.5) + 's';
+      container.appendChild(piece);
+    }
+    setTimeout(() => container.innerHTML = '', 4000);
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  renderTodos();
+  updateCount();
+</script>
+</body>
+</html>
